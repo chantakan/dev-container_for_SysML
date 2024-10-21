@@ -1,0 +1,30 @@
+{
+    "name": "SysML Development Environment",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "sysmljupyter",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "python.defaultInterpreterPath": "/home/sysml/conda/bin/python",
+          "python.linting.enabled": true,
+          "python.linting.pylintEnabled": false,
+          "python.linting.flake8Enabled": false,
+          "python.linting.mypyEnabled": false,
+          "python.linting.ruffEnabled": true,
+          "python.formatting.provider": "none",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        },
+        "extensions": [
+          "ms-python.python",
+          "ms-toolsai.jupyter",
+          "charliermarsh.ruff"
+        ]
+      }
+    },
+    "postCreateCommand": "pip install ruff"
+  }

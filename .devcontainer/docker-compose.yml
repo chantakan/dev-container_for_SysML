@@ -1,0 +1,32 @@
+version: '3'
+services:
+  postgresdbserver:
+    image: postgres:9.6.6
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_DB=sysml2
+    volumes:
+      - postgresdbserver:/var/lib/postgresql/data
+
+  sysmlapiserver:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.api
+    tty: true
+    depends_on:
+      - postgresdbserver
+
+  sysmljupyter:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    depends_on:
+      - sysmlapiserver
+
+volumes:
+  postgresdbserver:

@@ -1,0 +1,47 @@
+FROM openjdk:11-slim
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    xmlstarlet
+
+ARG NB_USER=sysml
+ARG NB_UID=1000
+ENV USER ${NB_USER}
+ENV NB_UID ${NB_UID}
+ENV HOME /home/${NB_USER}
+
+RUN adduser --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    ${NB_USER}
+
+USER ${NB_USER}
+WORKDIR ${HOME}
+
+ARG SBT_VERSION=1.2.8
+RUN wget -q https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz
+RUN tar xfz sbt-${SBT_VERSION}.tgz
+
+ARG RELEASE=2023-02
+RUN wget -q https://github.com/Systems-Modeling/SysML-v2-API-Services/archive/${RELEASE}.tar.gz -O ${RELEASE}.tar.gz
+RUN tar xfz ${RELEASE}.tar.gz
+
+WORKDIR ${HOME}/SysML-v2-API-Services-${RELEASE}
+
+RUN ${HOME}/sbt/bin/sbt clean update compile
+
+RUN sed -i 's/key=.whatever./key="longersecretnowarnings"/' conf/application.conf
+
+ARG SYSML_API_SERVER="sysmlapiserver:9000"
+RUN echo "\n\nplay.filters.hosts {\n   allowed = [\"${SYSML_API_SERVER}\", \"localhost:9000\"]\n}\n" >> conf/application.conf
+
+ARG DB_SERVER_URL="jdbc:postgresql://postgresdbserver:5432/sysml2"
+ARG DB_USER="postgres"
+ARG DB_PASSWORD="mysecretpassword"
+RUN xmlstarlet ed --inplace -u '_:persistence/_:persistence-unit/_:properties/_:property[@name="javax.persistence.jdbc.url"]/@value' -v ${DB_SERVER_URL} conf/META-INF/persistence.xml \
+    && xmlstarlet ed --inplace -u '_:persistence/_:persistence-unit/_:properties/_:property[@name="javax.persistence.jdbc.user"]/@value' -v ${DB_USER} conf/META-INF/persistence.xml \
+    && xmlstarlet ed --inplace -u '_:persistence/_:persistence-unit/_:properties/_:property[@name="javax.persistence.jdbc.password"]/@value' -v ${DB_PASSWORD} conf/META-INF/persistence.xml \
+    && xmlstarlet ed --inplace -u '_:persistence/_:persistence-unit/_:properties/_:property[@name="hibernate.hbm2ddl.auto"]/@value' -v "update" conf/META-INF/persistence.xml
+
+EXPOSE 9000
+CMD ${HOME}/sbt/bin/sbt run
